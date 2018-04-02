@@ -3,249 +3,182 @@ import ngRoute from 'angular-route';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import io from 'socket.io-client';
 
+import {pos} from './game/modules/animation.js';
+import {animation} from './game/modules/animation.js';
+import {objCanvas} from './game/modules/animation.js';
+import {ctx} from './game/modules/animation.js';
+
+/* ---------- GLOBALES ---------- */
+
+export var castorsArray = [];
+export var map;
+export var myCastor = {
+  posX: 0,
+  posY: 0
+}
+var castorName;
+/* ---------- FIN GLOBALES ---------- */
+
+
 (function(window, io) {
 const socketIo = io('http://localhost:8080/');
-var castorName;
 
-angular.module('app', ['ngRoute', 'routeAppControllers'])
-  .config(['$routeProvider',
-    function($routeProvider){
-      $routeProvider
-      .when('/home', {
-        templateUrl: './views/login.html',
-        controller: 'homeCtrl'
-      })
-      .when('/game', {
-        templateUrl: './views/canvas.html',
-        controller: 'gameCtrl'
-      })
-      .otherwise({
-           redirectTo: '/home'
-      })
+
+/* ---------- ROUTE ---------- */
+angular.module('route-app', []);
+
+/* ---------- HOMEPAGE ---------- */
+angular.module('routeAppControllers',[])
+.controller('homeCtrl', [
+  '$scope',
+  '$location',
+  '$interval',
+  function($scope, $location, $interval){
+    $scope.go = function (path){
+      $location.path(path);
     }
-  ]);
-  angular.module('routeAppControllers',[])
-  .controller('homeCtrl', [
-    '$scope',
-    '$location',
-    function($scope, $location){
-      $scope.go = function (path){
-        $location.path(path);
-      }
-      $scope.$on('$viewContentLoaded', function(){
+    $scope.$on('$viewContentLoaded', function(){
+      var count = 0;
+      $scope.count= count;
+      $interval(function(){
+         $scope.count = count;
+      }, 500);
+      $scope.valid = function(){
+        if (count < 2) {
+          return true;
+        } else {
+          return false;
+        }
+      };
 
-          document.getElementById('login').addEventListener('submit', function(e){
-            console.log('hoo')
-            e.preventDefault();
-            castorName = document.getElementById('loginCastor').value;
-            socketIo.emit('createCastor', {name: castorName});
-          });
+      socketIo.on('listPlayer', function(arr){
+        arr.forEach(function(player){
+          count += 1;
+          var li = document.createElement("li");
+          li.className = 'list-group-item';
+          li.textContent = player.name;
+          li.setAttribute("id", player);
+          document.getElementById('liste-salon').appendChild(li);
         });
+      });
 
-  }])
-    .controller('gameCtrl', [
-      '$scope',
-      '$route',
-      function($scope, $route){
-        $scope.$on('$viewContentLoaded', function(){
-              var canvas = document.getElementById('canvas');
-              var ctx = canvas.getContext('2d');
-              canvas.width = 1000;
-              canvas.height = 800;
+      socketIo.on('newPlayer', function(name){
+        count += 1;
+        var li = document.createElement("li");
+        li.className = 'list-group-item';
+        li.textContent = name;
+        li.setAttribute("id", name);
+        document.getElementById('liste-salon').appendChild(li);
+      });
 
-              const castorImg = new Image();
-              castorImg.src = 'docs/img/castor.png';
-              const castorSwimImg = new Image();
-              castorSwimImg.src = 'docs/img/castorswim.png';
-              const blockImg = new Image();
-              blockImg.src = 'docs/img/block.jpg';
-              const rockImg = new Image();
-              rockImg.src = 'docs/img/rock.png';
-              const waterImg = new Image();
-              waterImg.src = 'docs/img/water.jpg';
-              const barrageImg = new Image();
-              barrageImg.src = 'docs/img/barrage.jpg';
+      socketIo.on('removePlayer', function(player){
+        document.getElementById(player.name).remove();
+      });
 
-              var largeurBlock = 100;
-              var hauteurBlock = 100;
+      document.getElementById('login').addEventListener('submit', function(e){
+        e.preventDefault();
+        castorName = document.getElementById('loginCastor').value;
+        socketIo.emit('createCastor', {name: castorName});
+        document.getElementById('login').remove();
+      });
+      document.getElementById('playGame').addEventListener('click', function(e){
+        e.preventDefault();
+        socketIo.emit('launchGame');
+      })
+      socketIo.on('forceLocation', () => {
+          $location.path('/game');
+      })
 
-              var draw = function(obj, img){
-                ctx.drawImage(
-                  img,
-                  obj.spriteX, // position X sur l'img source
-                  obj.spriteY, // position Y sur l'img source
-                  obj.width, // Largeur de l'img source
-                  obj.height, // hauteur de l'img source
-                  obj.posX, // position X sur le canvas
-                  obj.posY, // position Y sur le canvas
-                  obj.widthC, // largeur sur le canvas
-                  obj.heightC // hauteur sur le canvas
-                );
-              };
-              var calculPosition = function(b){
-                b.widthC = largeurBlock;
-                b.heightC = hauteurBlock
-                b.posX = (b.positionX)*largeurBlock;
-                b.posY = (b.positionY)*hauteurBlock;
-              }
+    });
+  }
+])
+/* ---------- GAME ---------- */
+.controller('gameCtrl', [ // game ctrl
+  '$scope',
+  '$route',
+  function($scope, $route){
+    $scope.$on('$viewContentLoaded', function(){
+    //  const socket = io('/game');
+      socketIo.emit('startGame', 'coucou');
+      socketIo.on('sendMap', function(array){
 
-              var myCastor = {
-                posX: 0,
-                posY:0
-              }
-              var checkPositionX = function(){
-                if(myCastor.posX >= 3*largeurBlock){
-                  return -myCastor.posX + (largeurBlock*3)
-                } else {
-                  return 0
-                }
-              }
-              var checkPositionY = function(){
-                if(myCastor.posY >= 3*hauteurBlock){
-                  return -myCastor.posY + (hauteurBlock*3)
-                } else {
-                  return 0
-                }
-              }
-            var clearCanvas = function(){
-              ctx.clearRect(0, 0, canvas.width, canvas.height);
-            };
-            var animation = function(period){
-                var initialTimestamp;
-                var nextRefresh = function(timestamp){
-                    if (initialTimestamp === undefined) {
-                      initialTimestamp = timestamp;
-                    } else {
-                      var decay = timestamp - initialTimestamp;
-                      if (decay >= period) {
-                        initialTimestamp = timestamp;
-                        clearCanvas();
-                        ctx.save();
+    //    window.location = '#/game';
+        objCanvas.getCanvas();
+        array.forEach(function(b){
+          pos.calculPosition(b);
+        })
+        map = array;
+        animation(33);
+      });
+    });
 
-                          ctx.translate(checkPositionX(), checkPositionY())
+    socketIo.on('returnCreate', function(msg){
+      castorsArray.push(msg);
+      myCastor = msg;
+    });
 
-                        if (map){
-                          map.forEach(function(b){
-                            if (b.type === 0){
-                              draw(b, blockImg);
-                            } else if(b.type === 2){
-                              draw(b, waterImg);
-                            } else if(b.type === 3){
-                                draw(b, barrageImg);
-                                } else {
-                              draw(b, rockImg);
-                            }
-                          })
-                        }
-                        castorsArray.forEach(function(c){
-                          if (c.option === 'swim'){
-                            draw(c, castorSwimImg);
-                          } else {
-                            draw(c, castorImg);
-                          }
-                          ctx.font = '15px sans-serif';
-                          ctx.fillText(c.name, c.posX, c.posY);
-                        })
-                        ctx.restore();
-                      }
-                    }
-                    window.requestAnimationFrame(nextRefresh);
-                };
-                nextRefresh(0);
-              };
+    socketIo.on('monteeDesEaux', function(array){
+      array.forEach(function(b){
+        pos.calculPosition(b);
+      })
+      map = array;
+    })
+    socketIo.on('positionMyCastor', function(obj){
+      pos.calculPosition(obj);
+      myCastor = obj;
+    })
 
-                animation(33)
+      window.addEventListener('keydown', function(event){
+        var code = event.code;
+        if (code === 'ArrowRight' || code === 'ArrowLeft' || code === 'ArrowUp' || code === 'ArrowDown' || code === 'ControlLeft'){
+          event.preventDefault();
+        }
+        switch (code){
+          case 'ArrowRight':
+              socketIo.emit('moveCastor', 'ArrowRight');
+              break;
+          case 'ArrowLeft':
+              socketIo.emit('moveCastor', 'ArrowLeft');
+          break;
+          case 'ArrowUp':
+              socketIo.emit('moveCastor', 'ArrowUp');
+              break;
+          case 'ArrowDown':
+              socketIo.emit('moveCastor', 'ArrowDown');
+          break;
+          case 'ControlLeft':
+              socketIo.emit('moveCastor', 'ControlLeft');
+          break;
+        }
+      });
+
+      socketIo.on('updateCastors', function(array){
+        array.forEach(function(c){
+          pos.calculPosition(c);
+        })
+        castorsArray = array;
+
+      })
+      socketIo.on('positionBarrage', function(array){
+        array.forEach(function(b){
+          pos.calculPosition(b);
+        })
+        map = array;
+      })
 
 
+      socketIo.on('createOtherCastor', function(msg){
+        castorsArray.push(msg);
+      })
 
-
-
-            var castorsArray = [];
-            var map;
-
-            socketIo.emit('hello', 'coucou');
-
-
-            socketIo.on('returnCreate', function(msg){
-              castorsArray.push(msg);
-              myCastor = msg;
-            });
-            socketIo.on('sendMap', function(array){
-              array.forEach(function(b){
-                calculPosition(b);
-              })
-              map = array;
-            })
-            socketIo.on('monteeDesEaux', function(array){
-              array.forEach(function(b){
-                calculPosition(b);
-              })
-              map = array;
-            })
-            socketIo.on('positionMyCastor', function(obj){
-              calculPosition(obj)
-              myCastor = obj;
-            })
-
-
-
-
-              window.addEventListener('keydown', function(event){
-                var code = event.code;
-                if (code === 'ArrowRight' || code === 'ArrowLeft' || code === 'ArrowUp' || code === 'ArrowDown' || code === 'ControlLeft'){
-                  event.preventDefault();
-                }
-                switch (code){
-                  case 'ArrowRight':
-                      socketIo.emit('moveCastor', 'ArrowRight');
-                      break;
-                  case 'ArrowLeft':
-                      socketIo.emit('moveCastor', 'ArrowLeft');
-                  break;
-                  case 'ArrowUp':
-                      socketIo.emit('moveCastor', 'ArrowUp');
-                      break;
-                  case 'ArrowDown':
-                      socketIo.emit('moveCastor', 'ArrowDown');
-                  break;
-                  case 'ControlLeft':
-                  console.log('hhaa')
-                      socketIo.emit('moveCastor', 'ControlLeft');
-                  break;
-                }
-              });
-
-              socketIo.on('updateCastors', function(array){
-                array.forEach(function(c){
-                  calculPosition(c);
-                })
-                castorsArray = array;
-
-              })
-              socketIo.on('positionBarrage', function(array){
-                array.forEach(function(b){
-                  calculPosition(b);
-                })
-                map = array;
-              })
-
-
-              socketIo.on('createOtherCastor', function(msg){
-                castorsArray.push(msg);
-              })
-
-
+      document.getElementById('restart').addEventListener('click', function(){
+        socketIo.emit('restart', 'rejoue');
+      })
 //fin socket
-        });
-    }]);
+}]);
 
-/*
-  .directive('myCanvas', function(){
-    return {
-      restrict: 'E',
-      templateUrl: './views/canvas.html'
-    }
-  })*/
+
+  require('./components/route-app.js')
   angular.bootstrap(window.document, ['app'], {strictDi: true});
 
-}(window, io)); // IIFE
+}(window, io));

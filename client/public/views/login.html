@@ -1,5 +1,19 @@
  <form id="login">
    <label for="nom">Nom</label>
    <input type="text" id="loginCastor" name="nom" ng-model='nom' />
-   <input type="submit" ng-click="go('/game')" />
+   <input type="submit"/>
 </form>
+<h1>Joueurs disponibles :</h1>
+<div class="row">
+  <div class="col-8">
+    <div class="card">
+      <ul class="list-group list-group-flush" id="liste-salon" >
+      </ul>
+    </div>
+  </div>
+  <div class="col-4">
+    <p> Joueurs en attente : <span ng-bind="count"></span> </p>
+    <button id="playGame" type="submit" ng-disabled="valid()">Lancer la partie</button>
+  </div>
+</div>
+<!-- ng-click="go('/game')" -->

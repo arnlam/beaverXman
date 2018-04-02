@@ -3,11 +3,11 @@ const app = express();
 const path = require('path');
 const server = require('http').Server(app);
 const io = require('socket.io')(server, { wsEngine: 'ws' });
-var _ = require('lodash');
+const _ = require('lodash');
 
 
-app.use('/docs', express.static( path.resolve('../client/assets')));
-app.use('/views', express.static( path.resolve('../client/public/views')));
+app.use('/docs', express.static(path.resolve('../client/assets')));
+app.use('/views', express.static(path.resolve('../client/public/views')));
 
 app.get('/', function(req, res){
   res.sendFile( path.resolve('../client/public/index.html'));
@@ -31,7 +31,6 @@ ConstrCastor.prototype.getCoordCastor = function(){
     posX: this.posX,
     posY: this.posY,
     id: this.id
-
   }
 }
 
@@ -50,7 +49,9 @@ const map = [
             [2,0,0,0,0,0,0,0,0,0,0,0,0,2],
             [0,0,0,0,0,0,0,0,0,0,1,0,0,0],
             [0,2,2,2,0,0,0,2,2,2,0,0,0,0]
-            ]
+          ];
+
+
 const Block = function(typeBlock){
   this.spriteX = 0;
   this.spriteY = 0;
@@ -66,7 +67,11 @@ const Block = function(typeBlock){
 }
 
 var blockArray = [];
+var map_;
+
 const createMap = function(){
+  map_ = JSON.parse(JSON.stringify(map));
+
   for (var i=0; i<map.length; i++ ){
     for (var j= 0; j<map[i].length; j++){
       let block = new Block();
@@ -114,17 +119,16 @@ const getCasesMitoyennes = function(array, x, y){
 };
 
 const calculMonteedesEaux = function(){
-//  let blockArrayTemp = [];
-  for (let i=0; i<map.length; i++ ){
-    for (let j= 0; j<map[i].length; j++){
-      if(map[i][j] === 0){
-        let counts = getCasesMitoyennes(map, i, j);
+  for (let i=0; i<map_.length; i++ ){
+    for (let j= 0; j<map_[i].length; j++){
+      if(map_[i][j] === 0){
+        let counts = getCasesMitoyennes(map_, i, j);
         if(counts[0] >= 1){
           let block = new Block();
           block.positionY = i;
           block.positionX = j;
           block.type = 2;
-          map[i][j] = 2;
+          map_[i][j] = 2;
           let index = _.findIndex(blockArray, {positionY: i, positionX: j});
           blockArray.splice(index, 1, block);
         }
@@ -136,11 +140,9 @@ const calculMonteedesEaux = function(){
 
 
 const calculCollisionX = function(castor, nbr){
-  if (typeof map[castor.positionY][castor.positionX+nbr] === 'undefined'){
-    console.log('boom')
-  } else if (map[castor.positionY][castor.positionX+nbr] === 1){
-      console.log('boom')
-    } else if (map[castor.positionY][castor.positionX+nbr] === 2){
+  if (typeof map_[castor.positionY][castor.positionX+nbr] === 'undefined'){
+  } else if (map_[castor.positionY][castor.positionX+nbr] === 1){
+  } else if (map_[castor.positionY][castor.positionX+nbr] === 2){
       castor.positionX += nbr;
       castor.option = 'swim';
     } else {
@@ -150,30 +152,28 @@ const calculCollisionX = function(castor, nbr){
 };
 
 const calculCollisionY = function(castor, nbr){
-  if (typeof map[castor.positionY+nbr] === 'undefined'){
-    console.log('boom')
-  } else if (map[castor.positionY+nbr][castor.positionX] === 1){
-      console.log('boom')
-    } else if(map[castor.positionY+nbr][castor.positionX] === 2) {
-      castor.positionY += nbr
-      castor.option = 'swim';
-    } else {
-      castor.positionY += nbr
-      castor.option = '';
-    }
+  if (typeof map_[castor.positionY+nbr] === 'undefined'){
+  } else if (map_[castor.positionY+nbr][castor.positionX] === 1){
+  } else if(map_[castor.positionY+nbr][castor.positionX] === 2) {
+        castor.positionY += nbr
+        castor.option = 'swim';
+        } else {
+          castor.positionY += nbr
+          castor.option = '';
+        }
 };
 const calculCollisionBarrage = function(castor){
-  if (map[castor.positionY][castor.positionX] === 0 || map[castor.positionY][castor.positionX] === 3){
+  if (map_[castor.positionY][castor.positionX] === 0 || map_[castor.positionY][castor.positionX] === 3){
     // retrouver le block
     let index = _.findIndex(blockArray, {positionY:castor.positionY, positionX: castor.positionX });
     let block = new Block();
     block.positionY = castor.positionY;
     block.positionX = castor.positionX;
-    if (map[castor.positionY][castor.positionX] === 0){
-      map[castor.positionY][castor.positionX] = 3;
+    if (map_[castor.positionY][castor.positionX] === 0){
+      map_[castor.positionY][castor.positionX] = 3;
       block.type = 3;
     } else {
-      map[castor.positionY][castor.positionX] = 0;
+      map_[castor.positionY][castor.positionX] = 0;
       block.type = 0;
     }
     blockArray.splice(index, 1, block);
@@ -183,52 +183,83 @@ const calculCollisionBarrage = function(castor){
 var barrageArray =[];
 var castors = {};
 var i = 0;
+var playerArray = [];
+/*-------- CONNECTION AU SITE ----------*/
 io.on('connection', (socket) => {
-  castorsArray = Object.keys(castors).map(key => castors[key]);
+/*-------- CONNECTION AU SALON ----------*/
+  socket.join('salon');
+  var castorsArray = Object.keys(castors).map(prop => castors[prop])
+  io.emit('updateCastors', castorsArray);
+  socket.emit('listPlayer', playerArray);
+/*-------- LOGIN ----------*/
   socket.on('createCastor', (msg) => {
-    console.log(msg)
     i++;
-  //  io.emit('returnCreate', myCastor)
     var myCastor = new ConstrCastor(msg.name);
+    let player = {name: msg.name, id: socket.id}
+    playerArray.push(player);
     castors[socket.id] = myCastor;
-    var castorsArray = Object.keys(castors).map(prop => castors[prop])
+    // Ajoute joueur entrant
+    io.to('salon').emit('newPlayer', msg.name);
   });
-  socket.on('hello', (hello) =>{
-    io.emit('updateCastors', castorsArray);
+/*-------- LOGOUT ----------*/
+  socket.on('disconnect', function() {
+    let index = _.findIndex(playerArray, {id: socket.id});
+    let player = playerArray[index];
+    if (index !== -1){
+      io.to('salon').emit('removePlayer', player);
+      io.emit('updateCastors', castorsArray);
+      playerArray.splice(index, 1);
+    }
+  });
+/*-------- LANCEMENT JEU ET FORCER AFFICHAGE ----------*/
+  socket.on('launchGame', () =>{
     createMap();
-    io.emit('sendMap', blockArray)
-    //  castors[msg.name]
-    //  var castorsArray = Object.keys(castors).map(prop => castors[prop]);
+    io.emit('forceLocation', 'go');
+  });
+
+  socket.on('startGame', () =>{
+    io.emit('sendMap', blockArray);
+    var castorsArray = Object.keys(castors).map(prop => castors[prop])
+    io.emit('updateCastors', castorsArray);
     global.setInterval(function(){
       calculMonteedesEaux();
-      socket.emit('monteeDesEaux', blockArray);
-    },4000);
+      io.emit('monteeDesEaux', blockArray);
+    },8000);
   });
 
   socket.on('moveCastor', function(move){
     if(castors[socket.id]){
-      var myCastor = castors[socket.id]
+      var myCastor = castors[socket.id];
       switch (move) {
-        case 'ArrowRight': calculCollisionX(myCastor, 1)
-              socket.emit('positionMyCastor', myCastor)
+        case 'ArrowRight': calculCollisionX(myCastor, 1);
+              socket.emit('positionMyCastor', myCastor);
           break;
-        case 'ArrowLeft':  calculCollisionX(myCastor,-1)
-              socket.emit('positionMyCastor', myCastor)
+        case 'ArrowLeft':  calculCollisionX(myCastor,-1);
+              socket.emit('positionMyCastor', myCastor);
           break;
-        case 'ArrowUp':  calculCollisionY(myCastor,-1)
-              socket.emit('positionMyCastor', myCastor)
+        case 'ArrowUp':  calculCollisionY(myCastor,-1);
+              socket.emit('positionMyCastor', myCastor);
           break;
-        case 'ArrowDown':  calculCollisionY(myCastor, 1)
-              socket.emit('positionMyCastor', myCastor)
+        case 'ArrowDown':  calculCollisionY(myCastor, 1);
+              socket.emit('positionMyCastor', myCastor);
           break;
-        case 'ControlLeft':  calculCollisionBarrage(myCastor)
-              socket.emit('positionBarrage', blockArray)
+        case 'ControlLeft':  calculCollisionBarrage(myCastor);
+              io.emit('positionBarrage', blockArray);
           break;
       }
-      var castorsArray = Object.keys(castors).map(prop => castors[prop])
+      var castorsArray = Object.keys(castors).map(prop => castors[prop]);
       io.emit('updateCastors', castorsArray);
     }
   });
+
+  socket.on('restart', ()=> {
+    var blockArray = [];
+    createMap();
+    var barrageArray =[];
+    io.emit('positionBarrage', blockArray)
+    console.log(map_);
+    console.log(map);
+  })
 });
 
 server.listen(8080, function(){
