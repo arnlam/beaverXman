@@ -45,8 +45,8 @@ const map = [
             [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
             [0,0,0,0,0,0,0,1,0,0,0,1,0,0],
             [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-            [2,0,0,1,1,0,1,0,0,0,1,0,0,2],
-            [2,0,0,0,0,0,0,0,0,0,0,0,0,2],
+            [0,0,0,1,1,0,1,0,0,0,1,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
             [0,0,0,0,0,0,0,0,0,0,1,0,0,0],
             [0,2,2,2,0,0,0,2,2,2,0,0,0,0]
           ];
@@ -213,6 +213,10 @@ io.on('connection', (socket) => {
     if(castors[socket.id]){
       delete castors[socket.id]
     }
+    if(castors == {}){
+      blockArray = [];
+      barrageArray =[];
+    }
   });
 /*-------- LANCEMENT JEU ET FORCER AFFICHAGE ----------*/
   socket.on('launchGame', () =>{
@@ -256,9 +260,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('restart', ()=> {
-    var blockArray = [];
+    blockArray = [];
     createMap();
-    var barrageArray =[];
+    barrageArray =[];
     io.emit('positionBarrage', blockArray)
     console.log(map_);
     console.log(map);
