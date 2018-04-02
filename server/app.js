@@ -210,6 +210,9 @@ io.on('connection', (socket) => {
       io.emit('updateCastors', castorsArray);
       playerArray.splice(index, 1);
     }
+    if(castors[socket.id]){
+      delete castors[socket.id]
+    }
   });
 /*-------- LANCEMENT JEU ET FORCER AFFICHAGE ----------*/
   socket.on('launchGame', () =>{
@@ -229,7 +232,7 @@ io.on('connection', (socket) => {
 
   socket.on('moveCastor', function(move){
     if(castors[socket.id]){
-      var myCastor = castors[socket.id];
+      let myCastor = castors[socket.id];
       switch (move) {
         case 'ArrowRight': calculCollisionX(myCastor, 1);
               socket.emit('positionMyCastor', myCastor);
