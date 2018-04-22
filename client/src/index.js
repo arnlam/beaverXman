@@ -17,6 +17,9 @@ export var myCastor = {
   posY: 0
 }
 var castorName;
+var host;
+var playerArray = [];
+
 /* ---------- FIN GLOBALES ---------- */
 
 
@@ -33,7 +36,8 @@ angular.module('routeAppControllers',[])
   '$scope',
   '$location',
   '$interval',
-  function($scope, $location, $interval){
+  '$http',
+  function($scope, $location, $interval, $http){
     $scope.go = function (path){
       $location.path(path);
     }
@@ -43,26 +47,49 @@ angular.module('routeAppControllers',[])
       $interval(function(){
          $scope.count = count;
       }, 500);
+
       $scope.valid = function(){
+      if (host === 'host'){
+        console.log('host actif');
         if (count < 2) {
           return true;
         } else {
           return false;
+          console.log('bouton actif');
         }
+      } else {
+        return true;
+      }
       };
 
+      $scope.checkName = function(){
+        playerArray.forEach(function(p){
+          if ($scope.nom === p.name){
+            $scope.trouveunautrenom = true;
+          } else {
+            $scope.trouveunautrenom = false;
+          }
+        })
+      }
+
       socketIo.on('listPlayer', function(arr){
+        playerArray = arr;
         arr.forEach(function(player){
           count += 1;
+          console.log(count);
           var li = document.createElement("li");
           li.className = 'list-group-item';
           li.textContent = player.name;
-          li.setAttribute("id", player);
+          li.setAttribute("id", player.name);
           document.getElementById('liste-salon').appendChild(li);
         });
       });
+      socketIo.on('host', function(){
+        host = 'host';
+      })
 
       socketIo.on('newPlayer', function(name){
+        console.log(name)
         count += 1;
         var li = document.createElement("li");
         li.className = 'list-group-item';
@@ -72,7 +99,8 @@ angular.module('routeAppControllers',[])
       });
 
       socketIo.on('removePlayer', function(player){
-        document.getElementById(player.name).remove();
+      count -= 1;
+       document.getElementById(player.name).remove();
       });
 
       document.getElementById('login').addEventListener('submit', function(e){
@@ -81,7 +109,7 @@ angular.module('routeAppControllers',[])
         socketIo.emit('createCastor', {name: castorName});
         document.getElementById('login').remove();
       });
-      document.getElementById('playGame').addEventListener('click', function(e){
+        document.getElementById('playGame').addEventListener('click', function(e){
         e.preventDefault();
         socketIo.emit('launchGame');
       })
@@ -96,10 +124,11 @@ angular.module('routeAppControllers',[])
 .controller('gameCtrl', [ // game ctrl
   '$scope',
   '$route',
-  function($scope, $route){
+  '$location',
+  function($scope, $route, $location){
     $scope.$on('$viewContentLoaded', function(){
     //  const socket = io('/game');
-      socketIo.emit('startGame', 'coucou');
+      socketIo.emit('startGame', host);
       socketIo.on('sendMap', function(array){
 
     //    window.location = '#/game';
@@ -119,6 +148,10 @@ angular.module('routeAppControllers',[])
 
     socketIo.on('monteeDesEaux', function(array){
       array.forEach(function(b){
+        if(b.type === 5){
+          socketIo.emit('finishGame', 'end');
+          $location.path('/end');
+        }
         pos.calculPosition(b);
       })
       map = array;
@@ -128,31 +161,43 @@ angular.module('routeAppControllers',[])
       myCastor = obj;
     })
 
+    var touche;
       window.addEventListener('keydown', function(event){
         var code = event.code;
         if (code === 'ArrowRight' || code === 'ArrowLeft' || code === 'ArrowUp' || code === 'ArrowDown' || code === 'ControlLeft'){
           event.preventDefault();
         }
-        switch (code){
-          case 'ArrowRight':
-              socketIo.emit('moveCastor', 'ArrowRight');
-              break;
-          case 'ArrowLeft':
-              socketIo.emit('moveCastor', 'ArrowLeft');
-          break;
-          case 'ArrowUp':
-              socketIo.emit('moveCastor', 'ArrowUp');
-              break;
-          case 'ArrowDown':
-              socketIo.emit('moveCastor', 'ArrowDown');
-          break;
-          case 'ControlLeft':
-              socketIo.emit('moveCastor', 'ControlLeft');
-          break;
+        if (touche !== 'move'){
+          switch (code){
+            case 'ArrowRight':
+            touche = 'move';
+            socketIo.emit('moveCastor', 'ArrowRight');
+            break;
+            case 'ArrowLeft':
+             touche = 'move';
+            socketIo.emit('moveCastor', 'ArrowLeft');
+            break;
+            case 'ArrowUp':
+             touche = 'move';
+            socketIo.emit('moveCastor', 'ArrowUp');
+            break;
+            case 'ArrowDown':
+             touche = 'move';
+            socketIo.emit('moveCastor', 'ArrowDown');
+            break;
+            case 'ControlLeft':
+             touche = 'move';
+            socketIo.emit('moveCastor', 'ControlLeft');
+            break;
+          }
         }
       });
+      window.addEventListener('keyup', function(){
+        touche = '';
+      })
 
       socketIo.on('updateCastors', function(array){
+        playerArray = array;
         array.forEach(function(c){
           pos.calculPosition(c);
         })
@@ -175,7 +220,21 @@ angular.module('routeAppControllers',[])
         socketIo.emit('restart', 'rejoue');
       })
 //fin socket
-}]);
+}])
+.controller('endCtrl', [ // game ctrl
+  '$scope',
+  '$route',
+  '$location',
+  function($scope, $route, $location){
+    $scope.$on('$viewContentLoaded', function(){
+
+      document.getElementById('replay').addEventListener('click', function(e){
+        e.preventDefault();
+        $location.path('/home');
+      });
+
+    })
+  }]);
 
 
   require('./components/route-app.js')

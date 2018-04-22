@@ -14,6 +14,8 @@ const waterImg = new Image();
 waterImg.src = 'docs/img/water.jpg';
 const barrageImg = new Image();
 barrageImg.src = 'docs/img/barrage.jpg';
+const terrierImg = new Image();
+terrierImg.src = 'docs/img/terrier.jpg';
 
 const largeurBlock = 100;
 const hauteurBlock = 100;
@@ -29,14 +31,18 @@ export var pos = {
   },
 
   checkPositionX: function(){
-    if(myCastor.posX >= 3*largeurBlock){
+    if (myCastor.posX >= 10*largeurBlock){
+      return -largeurBlock*6;
+    } else if (myCastor.posX >= 3*largeurBlock){
       return -myCastor.posX + (largeurBlock*3)
     } else {
-      return 0
+      return 0;
     }
   },
   checkPositionY: function(){
-    if(myCastor.posY >= 3*hauteurBlock){
+    if (myCastor.posY >= 10*largeurBlock){
+      return -hauteurBlock*6;
+    } else if (myCastor.posY >= 3*hauteurBlock){
       return -myCastor.posY + (hauteurBlock*3)
     } else {
       return 0
@@ -80,18 +86,25 @@ export const animation = function(period){
         if (decay >= period) {
           initialTimestamp = timestamp;
           objCanvas.clearCanvas();
+          ctx.fillStyle = 'white';
+          ctx.font = '20px sans-serif';
           ctx.save();
           ctx.translate(pos.checkPositionX(), pos.checkPositionY())
           if (map){
             map.forEach(function(b){
-              if (b.type === 0){
+               if (b.type === 0){
                 objCanvas.draw(b, blockImg);
               } else if(b.type === 2){
                 objCanvas.draw(b, waterImg);
               } else if(b.type === 3){
                   objCanvas.draw(b, barrageImg);
-                  } else {
+              } else if (b.type === 1 ) {
                 objCanvas.draw(b, rockImg);
+              } else {
+                objCanvas.draw(b, terrierImg);
+                if (b.type !== 5){
+                  ctx.fillText(castorsArray[Number(parseInt(b.type))].name, b.posX+10, b.posY+20);
+                }
               }
             });
           }
@@ -101,10 +114,23 @@ export const animation = function(period){
             } else {
               objCanvas.draw(c, castorImg);
             }
-            ctx.font = '15px sans-serif';
             ctx.fillText(c.name, c.posX, c.posY);
           });
           ctx.restore();
+          castorsArray.forEach(function(c, index, array){
+              ctx.strokeText(c.name + ' : ' + c.score , 300 + index*150, 50);
+          });
+          // for(let i = 0; castorsArray < i ; i++){
+          //   if(index=== 0){
+          //     ctx.strokeText(castorsArray[i].name + ' : ' + castorsArray[i].score, 300, 50);
+          //   } else {
+          //     ctx.strokeText(castorsArray[i].name + ' : ' + castorsArray[i].score, 300 + castorsArray[i-1].name*20 + index*100, 50);
+          //   }
+          // }
+          // castorsArray.forEach(function(c, index, array){
+          //
+          //
+          // });
         }
       }
       window.requestAnimationFrame(nextRefresh);

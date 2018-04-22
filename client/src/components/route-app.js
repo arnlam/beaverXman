@@ -10,6 +10,10 @@ angular.module('app', ['ngRoute', 'routeAppControllers'])
         templateUrl: './views/canvas.html',
         controller: 'gameCtrl'
       })
+      .when('/end', {
+        templateUrl: './views/end.html',
+        controller: 'endCtrl'
+      })
       .otherwise({
            redirectTo: '/home'
       })

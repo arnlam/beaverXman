@@ -1,7 +1,7 @@
  <form id="login">
    <label for="nom">Nom</label>
-   <input type="text" id="loginCastor" name="nom" ng-model='nom' />
-   <input type="submit"/>
+   <input type="text" id="loginCastor" name="nom" ng-keyup="checkName()" ng-model='nom' required/>
+   <input type="submit" ng-disabled="trouveunautrenom"/>
 </form>
 <h1>Joueurs disponibles :</h1>
 <div class="row">
